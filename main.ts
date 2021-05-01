@@ -1,6 +1,4 @@
-import { App, Notice, Plugin, TFile } from 'obsidian';
-import {writeFile} from 'fs'
-import {join} from 'path'
+import { Notice, Plugin } from 'obsidian';
 
 const FILENAME = "meta.json";
 
