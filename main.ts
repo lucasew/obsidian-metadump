@@ -1,13 +1,61 @@
 import { Plugin } from 'obsidian';
+import { stringify } from 'querystring';
 
+interface Item {
+	basename: string,
+	extension: string,
+	name: string,
+	path: string,
+	stat: {
+		ctime: number,
+		mtime: number
+	}
+}
+function normalizeItem(item: Object) {
+	const {
+		basename,
+		extension,
+		name,
+		path,
+		stat: {
+			ctime,
+			mtime
+		}
+	} = item as any
+	return {
+		basename,
+		extension,
+		name,
+		path,
+		stat: {
+			ctime,
+			mtime
+		}
+	} as Item
+}
 
 export default class Dumper extends Plugin {
 
 	async dumpMetadata() {
 		console.log("dumping...")
 		// TODO: assert this is happening only once concurrently
-		console.log((this.app.vault as any).fileMap)
-		await this.saveData((this.app.vault as any).fileMap)
+		const input = (this.app.vault as any).fileMap
+		let ret : Record<string, Item> = {}
+		Object.keys(input).forEach((key) => {
+			const value = input[key]
+			try { // folders does not provide stat so normalizeItem will fail
+				const normalizedValue = normalizeItem(value)
+				ret[normalizedValue.path] = normalizedValue
+				if (!ret[normalizedValue.basename] || ret[normalizedValue.basename].path.split("/") > normalizedValue.path.split("/")) {
+					ret[normalizedValue.basename] = normalizedValue
+				}
+			} catch {
+				return
+			}
+			
+		})
+		const serialized = JSON.stringify(ret, null, 2)
+		await this.app.vault.create("files.json", serialized)
 	}
 
 	async onload() {
