@@ -1,15 +1,16 @@
-import { Plugin } from 'obsidian';
-import { stringify } from 'querystring';
+import { App, Notice, Plugin, TFile } from 'obsidian';
+import {writeFile} from 'fs'
+import {join} from 'path'
+
+const FILENAME = "meta.json";
 
 interface Item {
 	basename: string,
 	extension: string,
 	name: string,
 	path: string,
-	stat: {
-		ctime: number,
-		mtime: number
-	}
+	ctime: number,
+	mtime: number
 }
 function normalizeItem(item: Object) {
 	const {
@@ -27,10 +28,8 @@ function normalizeItem(item: Object) {
 		extension,
 		name,
 		path,
-		stat: {
-			ctime,
-			mtime
-		}
+		ctime,
+		mtime
 	} as Item
 }
 
@@ -45,21 +44,31 @@ export default class Dumper extends Plugin {
 			const value = input[key]
 			try { // folders does not provide stat so normalizeItem will fail
 				const normalizedValue = normalizeItem(value)
-				ret[normalizedValue.path] = normalizedValue
-				if (!ret[normalizedValue.basename] || ret[normalizedValue.basename].path.split("/") > normalizedValue.path.split("/")) {
-					ret[normalizedValue.basename] = normalizedValue
+				let shortKey = normalizedValue.basename
+				let longKey = normalizedValue.path
+				if (normalizedValue.extension === "md") {
+					longKey = longKey.slice(0, longKey.length - normalizedValue.extension.length - 1)
+				}
+				ret[longKey] = normalizedValue
+				if (ret[shortKey] === undefined || ret[shortKey].path.split("/").length > normalizedValue.path.split("/").length) {
+					ret[shortKey] = normalizedValue
 				}
 			} catch {
 				return
 			}
 			
 		})
-		const serialized = JSON.stringify(ret, null, 2)
-		await this.app.vault.create("files.json", serialized)
+		try {
+			const data = JSON.stringify(ret, null, 2)
+			await this.app.vault.adapter.write(FILENAME, data)
+		} catch (e) {
+			new Notice("Failed to dump metadata. Press Ctrl+Shift+i for details.")
+			console.error(e)
+		}
 	}
 
 	async onload() {
-		console.log('loading plugin');
+		console.log('started dumping metadata');
 
 		this.addCommand({
 			id: 'dump-metadata',
@@ -73,6 +82,6 @@ export default class Dumper extends Plugin {
 	}
 
 	onunload() {
-		console.log('unloading plugin');
+		console.log('stopped dumping metadata');
 	}
 }
