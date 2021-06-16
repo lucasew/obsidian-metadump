@@ -10,29 +10,32 @@ interface Item {
 	ctime: number,
 	mtime: number
 }
-function normalizeItem(item: Object) {
-	const {
-		basename,
-		extension,
-		name,
-		path,
-		stat: {
-			ctime,
-			mtime
-		}
-	} = item as any
-	return {
-		basename,
-		extension,
-		name,
-		path,
-		ctime,
-		mtime
-	} as Item
-}
+
 
 export default class Dumper extends Plugin {
-
+	normalizeItem(item: Object) {
+		const {
+			basename,
+			extension,
+			name,
+			path,
+			stat: {
+				ctime,
+				mtime
+			}
+		} = item as any
+		const backlinks = (this.app.metadataCache as any).getBacklinksForFile(item).data
+		const backlinkFiles = Object.keys(backlinks)
+		return {
+			basename,
+			extension,
+			name,
+			path,
+			ctime,
+			mtime,
+			referencedBy: backlinkFiles
+		} as Item
+	}
 	async dumpMetadata() {
 		console.log("dumping...")
 		// TODO: assert this is happening only once concurrently
@@ -41,7 +44,7 @@ export default class Dumper extends Plugin {
 		Object.keys(input).forEach((key) => {
 			const value = input[key]
 			try { // folders does not provide stat so normalizeItem will fail
-				const normalizedValue = normalizeItem(value)
+				const normalizedValue = this.normalizeItem(value)
 				let shortKey = normalizedValue.basename
 				let longKey = normalizedValue.path
 				if (normalizedValue.extension === "md") {
