@@ -42,6 +42,9 @@ export default class Dumper extends Plugin {
 		const input = (this.app.vault as any).fileMap
 		let ret : Record<string, Item> = {}
 		Object.keys(input).forEach((key) => {
+			if (key === "meta.json") {
+				return
+			}
 			const value = input[key]
 			try { // folders does not provide stat so normalizeItem will fail
 				const normalizedValue = this.normalizeItem(value)
