@@ -2,10 +2,7 @@
 name: Build obsidian plugin
 
 on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-    - '*' # Push events to matching any tag format, i.e. 1.0, 20.15.10
+  push
 
 env:
   PLUGIN_NAME: nldates-obsidian # Change this to the name of your plugin-id folder
@@ -38,9 +35,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         VERSION: ${{ github.ref }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
-        draft: false
+        release_name: Compilation for ${{ github.ref }}
+        draft: true
         prerelease: false
     - name: Upload zip file
       id: upload-zip
