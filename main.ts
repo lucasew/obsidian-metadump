@@ -1,4 +1,6 @@
-import { Notice, Plugin } from 'obsidian';
+import { FILE } from 'dns';
+import { Notice, Plugin, resolveSubpath } from 'obsidian';
+import { nextTick } from 'process';
 
 const FILENAME = "meta.json";
 
@@ -41,33 +43,41 @@ export default class Dumper extends Plugin {
 		// TODO: assert this is happening only once concurrently
 		const input = (this.app.vault as any).fileMap
 		let ret : Record<string, Item> = {}
-		Object.keys(input).forEach((key) => {
-			if (key === "meta.json") {
-				return
-			}
-			const value = input[key]
-			try { // folders does not provide stat so normalizeItem will fail
-				const normalizedValue = this.normalizeItem(value)
-				let shortKey = normalizedValue.basename
-				let longKey = normalizedValue.path
-				if (normalizedValue.extension === "md") {
-					longKey = longKey.slice(0, longKey.length - normalizedValue.extension.length - 1)
-				}
-				ret[longKey] = normalizedValue
-				if (ret[shortKey] === undefined || ret[shortKey].path.split("/").length > normalizedValue.path.split("/").length) {
-					ret[shortKey] = normalizedValue
-				}
-			} catch {
-				return
-			}
-			
+		const promises = Object.keys(input).map((key) => {
+			return new Promise<void>((res) => {
+				setTimeout(() => { // WORKAROUND: don't freeze the main thread while dumping stuff. Good for big (>1k notes) vaults
+					try { // folders does not provide stat so normalizeItem will fail
+						if (key === "meta.json") {
+							throw null // just to finally
+						}
+						const value = input[key]
+						const normalizedValue = this.normalizeItem(value)
+						let shortKey = normalizedValue.basename
+						let longKey = normalizedValue.path
+						if (normalizedValue.extension === "md") {
+							longKey = longKey.slice(0, longKey.length - normalizedValue.extension.length - 1)
+						}
+						ret[longKey] = normalizedValue
+						if (ret[shortKey] === undefined || ret[shortKey].path.split("/").length > normalizedValue.path.split("/").length) {
+							ret[shortKey] = normalizedValue
+						}
+					} 
+					catch {}
+					finally {
+						res()
+					}
+				}, 1)
+			})
 		})
 		try {
+			await Promise.all(promises)
 			const data = JSON.stringify(ret, null, 2)
 			await this.app.vault.adapter.write(FILENAME, data)
-		} catch (e) {
+		} catch(e) {
 			new Notice("Failed to dump metadata. Press Ctrl+Shift+i for details.")
 			console.error(e)
+		} finally {
+			console.log("metadump success")
 		}
 	}
 
