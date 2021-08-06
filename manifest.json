@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-metadump",
 	"name": "Metadumper",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"minAppVersion": "0.9.12",
 	"description": "Just dump the linking metadata in a interval.",
 	"author": "lucasew",
