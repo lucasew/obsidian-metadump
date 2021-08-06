@@ -1,6 +1,4 @@
-import { FILE } from 'dns';
-import { Notice, Plugin, resolveSubpath } from 'obsidian';
-import { nextTick } from 'process';
+import { Notice, Plugin } from 'obsidian';
 
 const FILENAME = "meta.json";
 
