@@ -4,8 +4,8 @@
   "description": "A plugin to dump link metadata for personal automations",
   "main": "main.js",
   "scripts": {
-    "dev": "rollup --config rollup.config.js -w",
-    "build": "rollup --config rollup.config.js --environment BUILD:production"
+    "dev": "rollup --config rollup.config.mjs -w",
+    "build": "rollup --config rollup.config.mjs --environment BUILD:production"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,7 @@
     "@types/node": "^22.0.0",
     "obsidian": "^1.0.0",
     "rollup": "^4.0.0",
+    "rollup-plugin-copy": "^3.5.0",
     "tslib": "^2.2.0",
     "typescript": "^5.0.0"
   }
