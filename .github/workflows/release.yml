@@ -32,14 +32,18 @@ jobs:
     - name: Create Release and Upload Assets
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PLUGIN_NAME: ${{ env.PLUGIN_NAME }}
+        TAG_NAME: ${{ steps.build.outputs.tag_name }}
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_REPO: ${{ github.repository }}
       run: |
-        gh release create "release_${{ github.ref }}" \
-          "${{ env.PLUGIN_NAME }}.zip#${{ env.PLUGIN_NAME }}-${{ steps.build.outputs.tag_name }}.zip" \
+        gh release create "release_${GITHUB_REF}" \
+          "${PLUGIN_NAME}.zip#${PLUGIN_NAME}-${TAG_NAME}.zip" \
           main.js \
           manifest.json \
-          --title "Compilation for ${{ github.ref }}" \
+          --title "Compilation for ${GITHUB_REF}" \
           --draft \
-          --repo ${{ github.repository }}
+          --repo "${GITHUB_REPO}"
     # - name: Upload styles.css
     #   id: upload-css
     #   uses: actions/upload-release-asset@v1
