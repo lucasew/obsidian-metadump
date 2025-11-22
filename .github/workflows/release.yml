@@ -35,15 +35,13 @@ jobs:
         PLUGIN_NAME: ${{ env.PLUGIN_NAME }}
         TAG_NAME: ${{ steps.build.outputs.tag_name }}
         GITHUB_REF: ${{ github.ref }}
-        GITHUB_REPO: ${{ github.repository }}
       run: |
         gh release create "release_${GITHUB_REF}" \
           "${PLUGIN_NAME}.zip#${PLUGIN_NAME}-${TAG_NAME}.zip" \
           main.js \
           manifest.json \
           --title "Compilation for ${GITHUB_REF}" \
-          --draft \
-          --repo "${GITHUB_REPO}"
+          --draft
     # - name: Upload styles.css
     #   id: upload-css
     #   uses: actions/upload-release-asset@v1
