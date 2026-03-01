@@ -1,0 +1,69 @@
+name: Build obsidian plugin
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  PLUGIN_NAME: obsidian-metadump
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: Install mise
+      uses: jdx/mise-action@v2.1.11
+
+    - name: Install
+      run: mise run install
+
+    - name: Codegen
+      run: mise run codegen
+
+    - name: PR if Difference
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH_NAME="update-codegen-${GITHUB_SHA}"
+          git checkout -b $BRANCH_NAME
+          git add -A
+          git commit -m "chore: update generated code"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          GIT_CMD="push"
+          git $GIT_CMD -u origin $BRANCH_NAME || true
+          gh pr create --title "chore: update generated code" --body "Automated PR to update generated code" --head $BRANCH_NAME --base ${GITHUB_REF_NAME} || echo "PR already exists"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: CI
+      run: mise run ci
+
+    - name: Build plugin archive
+      if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+      run: |
+        mkdir ${{ env.PLUGIN_NAME }}
+        cp main.js manifest.json ${{ env.PLUGIN_NAME }}
+        zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}
+        echo "TAG_NAME=$(git tag --sort version:refname | tail -n 1)" >> $GITHUB_ENV
+
+    - name: Create Release and Upload Assets
+      if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release create "release_${GITHUB_REF}" \
+          "${PLUGIN_NAME}.zip#${PLUGIN_NAME}-${TAG_NAME}.zip" \
+          main.js \
+          manifest.json \
+          --title "Compilation for ${GITHUB_REF}" \
+          --draft

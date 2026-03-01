@@ -1,0 +1,30 @@
+[tools]
+node = "22"
+"github:lucasew/workspaced" = "0.1.6"
+
+[tasks.install]
+depends = ["install:*"]
+
+[tasks."install:npm"]
+run = "npm install"
+
+[tasks.codegen]
+depends = ["codegen:*"]
+
+[tasks."codegen:build"]
+run = "npm run build --if-present"
+
+[tasks.test]
+depends = ["test:*"]
+
+[tasks."test:npm"]
+run = "npm test --if-present"
+
+[tasks.lint]
+run = "workspaced codebase lint"
+
+[tasks.fmt]
+run = "workspaced codebase format"
+
+[tasks.ci]
+depends = ["lint", "test"]
