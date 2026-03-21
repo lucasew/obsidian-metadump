@@ -1,0 +1,1 @@
+- 2024-03-21: [Medium] Empty catch blocks and direct console.error calls mask bugs; always route errors through a centralized error-reporting function.

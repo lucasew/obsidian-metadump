@@ -1,4 +1,5 @@
 import { Notice, Plugin } from 'obsidian';
+import { reportError } from './errorReporter';
 
 const FILENAME = "meta.json";
 
@@ -60,7 +61,7 @@ export default class Dumper extends Plugin {
 							ret[shortKey] = normalizedValue
 						}
 					} 
-					catch {}
+					catch (e) { if (e !== null) reportError(e); }
 					finally {
 						res()
 					}
@@ -73,7 +74,7 @@ export default class Dumper extends Plugin {
 			await this.app.vault.adapter.write(FILENAME, data)
 		} catch(e) {
 			new Notice("Failed to dump metadata. Press Ctrl+Shift+i for details.")
-			console.error(e)
+			reportError(e)
 		} finally {
 			console.log("metadump success")
 		}
