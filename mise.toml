@@ -1,0 +1,17 @@
+[tools]
+node = "20.11.1"
+
+[tasks."install"]
+run = "npm install"
+
+[tasks."build"]
+depends = ["install"]
+run = "npm run build"
+
+[tasks."test"]
+depends = ["build"]
+run = "echo 'No tests yet'"
+
+[tasks."ci"]
+depends = ["install", "build", "test"]
+run = "echo 'CI checks passed'"
