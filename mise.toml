@@ -1,0 +1,9 @@
+[tools]
+node = "22.0.0"
+
+[tasks."install:*"]
+run = "npm install"
+
+[tasks."ci:*"]
+depends = ["install:*"]
+run = "npm run build"
