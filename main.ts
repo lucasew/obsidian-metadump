@@ -2,17 +2,43 @@ import { Notice, Plugin } from 'obsidian';
 
 const FILENAME = "meta.json";
 
+/**
+ * Represents the normalized metadata for a single item (file or folder) in the vault.
+ */
 interface Item {
-	basename: string,
-	extension: string,
-	name: string,
-	path: string,
-	ctime: number,
-	mtime: number
+	/** The file name without the extension (e.g., "my-note"). */
+	basename: string;
+	/** The file extension (e.g., "md"). */
+	extension: string;
+	/** The full file name with extension (e.g., "my-note.md"). */
+	name: string;
+	/** The full path relative to the vault root (e.g., "folder/my-note.md"). */
+	path: string;
+	/** Creation time of the file in milliseconds since epoch. */
+	ctime: number;
+	/** Last modification time of the file in milliseconds since epoch. */
+	mtime: number;
+	/**
+	 * Array of paths to other files that link to this item.
+	 * Dynamically populated using Obsidian's internal metadataCache.
+	 */
+	referencedBy?: string[];
 }
 
 
+/**
+ * The main plugin class responsible for periodically scanning the Obsidian vault
+ * and dumping metadata (file paths, timestamps, and backlinks) into a JSON file.
+ * This enables external scripts or personal automations to consume vault metadata.
+ */
 export default class Dumper extends Plugin {
+	/**
+	 * Extracts and normalizes metadata from an Obsidian file/folder object.
+	 * Resolves backlinks for the item using the internal metadataCache.
+	 *
+	 * @param item - The raw file or folder object from the Obsidian vault.
+	 * @returns The normalized `Item` metadata, including an array of files that link to it.
+	 */
 	normalizeItem(item: Object) {
 		const {
 			basename,
@@ -36,6 +62,17 @@ export default class Dumper extends Plugin {
 			referencedBy: backlinkFiles
 		} as Item
 	}
+	/**
+	 * Iterates over all files in the vault, normalizes their metadata, and writes
+	 * the aggregated result to the target JSON file.
+	 *
+	 * To prevent UI freezes in large vaults, processing is yielded to the event loop
+	 * via `setTimeout`.
+	 *
+	 * Side effects:
+	 * - Writes to the file system (`meta.json` in the vault root).
+	 * - Shows a Notice in the Obsidian UI if the dump fails.
+	 */
 	async dumpMetadata() {
 		console.log("dumping...")
 		// TODO: assert this is happening only once concurrently
@@ -59,7 +96,7 @@ export default class Dumper extends Plugin {
 						if (ret[shortKey] === undefined || ret[shortKey].path.split("/").length > normalizedValue.path.split("/").length) {
 							ret[shortKey] = normalizedValue
 						}
-					} 
+					}
 					catch {}
 					finally {
 						res()
@@ -79,6 +116,11 @@ export default class Dumper extends Plugin {
 		}
 	}
 
+	/**
+	 * Plugin lifecycle hook: called when the plugin is loaded by Obsidian.
+	 * Registers the manual command palette action and sets up the 5-minute interval
+	 * for automatic background metadata dumping.
+	 */
 	async onload() {
 		console.log('started dumping metadata');
 
@@ -93,6 +135,9 @@ export default class Dumper extends Plugin {
 		this.registerInterval(window.setInterval(() => this.dumpMetadata(), 1000 * 300)) // 5 minutes
 	}
 
+	/**
+	 * Plugin lifecycle hook: called when the plugin is disabled or Obsidian is closed.
+	 */
 	onunload() {
 		console.log('stopped dumping metadata');
 	}
