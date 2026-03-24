@@ -2,6 +2,11 @@ import { Notice, Plugin } from 'obsidian';
 
 const FILENAME = "meta.json";
 
+/**
+ * Represents the normalized metadata for a single entity in the vault.
+ * Extracted by external tools or personal automations to build offline graphs
+ * without needing to parse the markdown contents directly.
+ */
 interface Item {
 	basename: string,
 	extension: string,
@@ -12,7 +17,23 @@ interface Item {
 }
 
 
+/**
+ * Main Obsidian plugin entrypoint. Orchestrates periodic extraction of the vault's
+ * file metadata and backlink graph, persisting it to a unified JSON file.
+ * This decoupled approach allows separate external scripts to consume the vault
+ * state reliably.
+ */
 export default class Dumper extends Plugin {
+	/**
+	 * Transforms an internal Obsidian file object into a standardized `Item` format,
+	 * enriching it with resolved backlinks from the global `metadataCache`.
+	 *
+	 * @param item - Raw Obsidian file/folder object from the internal `fileMap`.
+	 * @returns The structured metadata, including a dynamically injected `referencedBy` array.
+	 *
+	 * @throws Will fail silently (caught by caller) if the item is a folder, as folders
+	 * lack the required `stat` (ctime/mtime) properties.
+	 */
 	normalizeItem(item: Object) {
 		const {
 			basename,
@@ -36,6 +57,22 @@ export default class Dumper extends Plugin {
 			referencedBy: backlinkFiles
 		} as Item
 	}
+	/**
+	 * Asynchronously scans the entire vault and serializes the metadata graph to disk.
+	 *
+	 * **Performance considerations:**
+	 * To prevent freezing the Obsidian UI on large vaults (>1k notes), the iteration
+	 * is chunked using `setTimeout(..., 1)`. This macro-task scheduling yields the main
+	 * thread between processing each file.
+	 *
+	 * **Edge Cases handled:**
+	 * - Skips the target `meta.json` file to prevent recursive processing.
+	 * - Gracefully handles and ignores folders (via try/catch around `normalizeItem`).
+	 * - Deduplicates entries by prioritizing the shortest path when filenames collide.
+	 *
+	 * **Side Effects:**
+	 * Overwrites `meta.json` in the root of the vault. Spawns a UI `Notice` if the write fails.
+	 */
 	async dumpMetadata() {
 		console.log("dumping...")
 		// TODO: assert this is happening only once concurrently
@@ -79,6 +116,11 @@ export default class Dumper extends Plugin {
 		}
 	}
 
+	/**
+	 * Bootstraps the plugin lifecycle upon activation.
+	 * Registers a manual command palette trigger and establishes a 5-minute
+	 * background polling interval to keep the JSON graph eventually consistent.
+	 */
 	async onload() {
 		console.log('started dumping metadata');
 
@@ -93,6 +135,10 @@ export default class Dumper extends Plugin {
 		this.registerInterval(window.setInterval(() => this.dumpMetadata(), 1000 * 300)) // 5 minutes
 	}
 
+	/**
+	 * Lifecycle hook called when the plugin is disabled or Obsidian is closing.
+	 * (Note: Intervals registered via `registerInterval` are automatically cleaned up by Obsidian).
+	 */
 	onunload() {
 		console.log('stopped dumping metadata');
 	}
